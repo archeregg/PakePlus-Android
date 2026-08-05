@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>法律咨询生成器</title>
+
+<!-- PWA Manifest -->
+<link rel="manifest" href="./manifest.json">
+
+<!-- iOS Safari 全屏 Web App 配置（添加到主屏幕后像原生App一样打开） -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="法律咨询">
+<meta name="format-detection" content="telephone=no">
+
+<!-- iOS 桌面图标 -->
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="167x167" href="./icon-167.png">
+<link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png">
+
+<!-- 主题色 -->
+<meta name="theme-color" content="#ededed">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: #ededed;
+    min-height: 100vh;
+    /* 适配 iPhone 底部 Home Indicator */
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  /* iOS 全屏 Web App 顶部安全区占位（刘海/灵动岛） */
+  .safe-area-top {
+    background: #ededed;
+    height: env(safe-area-inset-top);
+    width: 100%;
+  }
+  /* 模拟微信顶部状态栏 */
+  .wx-status-bar {
+    background: #ededed;
+    color: #000;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .wx-status-bar .time { font-size: 13px; }
+  .wx-status-bar .icons { letter-spacing: 2px; }
+  /* 微信顶部标题栏 */
+  .wx-nav-bar {
+    background: #ededed;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    border-bottom: 1px solid #d6d6d6;
+  }
+  .wx-nav-bar .back {
+    position: absolute;
+    left: 16px;
+    font-size: 20px;
+    color: #000;
+    cursor: default;
+  }
+  .wx-nav-bar .title {
+    font-size: 17px;
+    font-weight: 600;
+    color: #000;
+  }
+  .wx-nav-bar .more {
+    position: absolute;
+    right: 16px;
+    font-size: 20px;
+    color: #000;
+  }
+  /* 聊天背景区域 */
+  .wx-chat-bg {
+    background: #ededed;
+    padding: 12px 12px 20px;
+    max-width: 560px;
+    margin: 0 auto;
+    min-height: calc(100vh - 24px - 44px);
+  }
+  /* 系统消息卡片（输入区域用这种卡片） */
+  .wx-card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 16px 16px 18px;
+    margin-bottom: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    border: 1px solid #eaeaea;
+  }
+  .wx-card-title {
+    font-size: 14px;
+    color: #333;
+    font-weight: 600;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #f2f2f2;
+    padding-bottom: 8px;
+  }
+  .wx-emoji-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #f7f7f7;
+    border-radius: 8px;
+    padding: 10px 14px;
+    border: 1px solid #ececec;
+  }
+  .wx-emoji {
+    font-size: 28px;
+    min-width: 50px;
+    text-align: center;
+  }
+  .wx-btn {
+    background: #07c160;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    padding: 7px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.15s;
+    flex-shrink: 0;
+  }
+  .wx-btn:hover { background: #06ad56; }
+  .wx-btn.gray { background: #f2f2f2; color: #333; }
+  .wx-btn.gray:hover { background: #e8e8e8; }
+  .wx-textarea {
+    width: 100%;
+    min-height: 72px;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 15px;
+    line-height: 1.5;
+    resize: vertical;
+    font-family: inherit;
+    background: #ffffff;
+    transition: border-color 0.15s;
+    color: #191919;
+  }
+  .wx-textarea:focus {
+    outline: none;
+    border-color: #07c160;
+    background: #ffffff;
+  }
+  .wx-tags {
+    background: #f7f7f7;
+    border-radius: 8px;
+    padding: 12px;
+    border: 1px solid #ececec;
+    min-height: 52px;
+    font-size: 14px;
+    line-height: 1.9;
+    word-break: break-all;
+  }
+  .wx-tags .tag {
+    color: #07c160;
+    font-weight: 500;
+  }
+  .wx-avatar-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #f7f7f7;
+    border-radius: 8px;
+    padding: 10px 14px;
+    border: 1px solid #ececec;
+  }
+  .btn-row { display: flex; gap: 10px; }
+  .wx-primary-btn {
+    flex: 1;
+    background: #07c160;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 14px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .wx-primary-btn:hover { background: #06ad56; }
+  .wx-primary-btn:active { background: #069c4c; }
+  .wx-blue-btn {
+    flex: 0 0 auto;
+    background: #1a73e8;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 14px 26px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .wx-blue-btn:hover { background: #1557b0; }
+  .toast {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.8);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 8px;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 14px;
+  }
+  .toast.show { opacity: 1; }
+  .preview-section {
+    margin-top: 14px;
+    text-align: center;
+    display: none;
+  }
+  .preview-section.show { display: block; }
+  .preview-section h3 {
+    font-size: 14px;
+    margin-bottom: 10px;
+    color: #888;
+    font-weight: 500;
+  }
+  .preview-section canvas { display: none; }
+  .preview-section img.screenshot-img {
+    max-width: 100%;
+    border-radius: 0;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+    background: #ededed;
+    display: block;
+    margin: 0 auto;
+    cursor: context-menu;
+    user-select: none;
+    -webkit-user-drag: element;
+  }
+  .preview-section .tip {
+    font-size: 12px;
+    color: #999;
+    margin-top: 8px;
+  }
+  .answer-item {
+    position: relative;
+    margin-bottom: 10px;
+  }
+  .answer-item:last-child { margin-bottom: 0; }
+  .answer-item .answer-label {
+    font-size: 12px;
+    color: #b8860b;
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+  .answer-item .remove-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #f56c6c;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .answer-item .remove-btn:hover { background: #e05050; }
+</style>
+</head>
+<body>
+
+<!-- iOS 顶部安全区占位 -->
+<div class="safe-area-top"></div>
+
+<!-- 微信顶部状态栏 -->
+<div class="wx-status-bar">
+  <span class="time" id="statusTime">9:41</span>
+  <span class="icons">📶 📡 🔋</span>
+</div>
+
+<!-- 微信顶部导航栏 -->
+<div class="wx-nav-bar">
+  <span class="back">‹</span>
+  <span class="title">律师为您免费推介当地律师</span>
+  <span class="more">⋯</span>
+</div>
+
+<!-- 聊天背景主区域 -->
+<div class="wx-chat-bg">
+
+  <div class="wx-card">
+    <div class="wx-card-title">
+      <span>① 问前表情</span>
+      <button class="wx-btn" onclick="refreshEmoji(1)">🔄 换一个</button>
+    </div>
+    <div class="wx-emoji-row">
+      <span class="wx-emoji" id="emoji1">😀</span>
+      <span style="color:#888;font-size:13px;">点击右侧按钮随机更换表情</span>
+    </div>
+  </div>
+
+  <div class="wx-card">
+    <div class="wx-card-title">
+      <span>② 用户问题（问）</span>
+    </div>
+    <textarea class="wx-textarea" id="text2" placeholder="请输入或粘贴用户的问题..."></textarea>
+  </div>
+
+  <div class="wx-card">
+    <div class="wx-card-title">
+      <span>③ 答前表情</span>
+      <button class="wx-btn" onclick="refreshEmoji(3)">🔄 换一个</button>
+    </div>
+    <div class="wx-emoji-row">
+      <span class="wx-emoji" id="emoji3">😀</span>
+      <span style="color:#888;font-size:13px;">点击右侧按钮随机更换表情</span>
+    </div>
+  </div>
+
+  <div class="wx-card">
+    <div class="wx-card-title">
+      <span>④ 律师回答（答）</span>
+      <button class="wx-btn" onclick="addAnswerBox()">➕ +1次回答</button>
+    </div>
+    <div id="answerBoxes">
+      <div class="answer-item" data-idx="1">
+        <div class="answer-label">回答 1</div>
+        <textarea class="wx-textarea answer-text" placeholder="请输入或粘贴律师的回答..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="wx-card">
+    <div class="wx-card-title">
+      <span>⑤ 随机标签（每次10个）</span>
+      <button class="wx-btn" onclick="refreshTags()">🔄 换一批</button>
+    </div>
+    <div class="wx-tags" id="tagsBox"></div>
+  </div>
+
+  <div class="wx-card">
+    <div class="wx-card-title">
+      <span>用户A头像预览</span>
+      <button class="wx-btn" onclick="refreshUserAAvatar()">🔄 随机换一个</button>
+    </div>
+    <div class="wx-avatar-row">
+      <div id="userAAvatarPreviewContainer" style="width:48px;height:48px;border-radius:50%;flex-shrink:0;background:#f0f0f0;display:flex;align-items:center;justify-content:center;overflow:hidden;"></div>
+      <span style="color:#888;font-size:13px;">生成的聊天截图中用户A使用此头像（在右侧）</span>
+    </div>
+  </div>
+
+  <button class="wx-primary-btn" style="width:100%;" onclick="generate()">✨ 生成内容 & 截图</button>
+
+  <div class="preview-section" id="previewSection">
+    <h3>── 📸 生成的微信聊天截图（右键图片可保存）──</h3>
+    <canvas id="previewCanvas"></canvas>
+    <img class="screenshot-img" id="screenshotImg" alt="微信聊天截图">
+    <div class="tip">提示：在图片上点击鼠标右键 → 选择「图片另存为…」即可保存到本地</div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const EMOJI_POOL = [
+  '😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇',
+  '🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚',
+  '😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🥸',
+  '🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️',
+  '😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡',
+  '🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓',
+  '🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄',
+  '😯','😦','😧','😮','😲','🥱','😴','🤤','😪','😵',
+  '🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠',
+  '😈','👿','👹','👺','🤡','👻','💀','☠️','👽','👾',
+  '🤖','😺','😸','😹','😻','😼','😽','🙀','😿','😾',
+  '❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔',
+  '👍','👎','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙',
+  '👈','👉','👆','👇','☝️','✋','🤚','🖐️','🖖','👋',
+  '🤝','🙏','💪','🦾','🦿','🦵','🦶','👂','🦻','👃',
+  '🧠','🫀','🫁','🦷','🦴','👀','👁️','👅','👄','💋',
+  '🔥','✨','🌟','⭐','💫','💥','💢','💦','💨','💫',
+  '🎉','🎊','🎁','🎂','🍰','🍀','🍁','🍂','🍃','🌸',
+  '🌈','☀️','⛅','☁️','⛈️','🌤️','🌥️','🌦️','🌧️','⛈️',
+  '❄️','☃️','⛄','🌨️','🌬️','💨','🌪️','🌫️','🌙','🌛',
+  '⚡','🌩️','🔆','💡','🔦','🏮','🕯️','🔥','💐','🌹',
+  '🏵️','🌺','🌻','🌼','🌷','🌱','🪴','🌲','🌳','🌴',
+  '🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈',
+  '🍒','🍑','🥭','🍍','🥥','🥝','🍅','🍆','🥑','🥦',
+  '🥕','🌽','🥕','🫒','🧄','🧅','🥔','🍠','🥐','🥯',
+  '🍞','🥖','🥨','🧀','🥚','🍳','🧈','🥞','🧇','🥓',
+  '🍔','🍟','🌭','🥪','🌮','🌯','🫔','🥙','🧆','🥚',
+  '🍝','🍜','🍲','🍛','🍣','🍱','🥟','🍤','🍙','🍚',
+  '🍥','🍢','🍧','🍨','🍦','🥧','🧁','🍰','🎂','🍮',
+  '🍯','🍼','🥛','☕','🫖','🍵','🍶','🥣','🥤','🧋',
+  '🧃','🧉','🧊','🥢','🍽️','🍴','🥄','🔪','🫙','🏺',
+  '⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🎱','🏓',
+  '🏸','🥊','🥋','🏒','🏑','🥍','🏏','🪃','🥅','⛳',
+  '🪁','🏹','🎣','🤿','🥊','🥋','🎽','🛹','🛼','🛷',
+  '⛸️','🥌','🎿','⛷️','🏂','🪂','🏋️','🤼','🤸','🤺',
+  '⛹️','🤾','🏌️','🏇','🧘','🏄','🏊','🤽','🚣','🧗',
+  '🚵','🚴','🏆','🥇','🥈','🥉','🏅','🎖️','🏵️','🎗️',
+  '🎫','🎟️','🎪','🤹','🎭','🩰','🎨','🎬','🎤','🎧',
+  '🎼','🎹','🥁','🪘','🎷','🎺','🎸','🪕','🎻','🪗',
+  '🎲','♟️','🎯','🎳','🎮','🕹️','🧩','🪄','🎰','🎲',
+  '🚗','🚕','🚙','🚌','🚓','🚑','🚒','🚐','🛻','🚚',
+  '🚛','🚜','🦯','🦽','🦼','🛴','🚲','🛵','🏍️','🛺',
+  '🚨','🚔','🚍','🚘','🚖','🚡','🚠','🚟','🚃','🚋',
+  '🚞','🚂','🚆','🚄','🚅','🚈','🚝','🚞','🚋','🚌'
+];
+
+const TAG_LIBRARY = ['hr','人事','人力资源','招聘','劳动法','劳动仲裁','劳动合同','劳动合同法','律师','法律咨询','企业法律顾问','Hr交流群','行政人事','用人单位','劳动者'];
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function getRandomEmoji() {
+  return EMOJI_POOL[Math.floor(Math.random() * EMOJI_POOL.length)];
+}
+
+function refreshEmoji(id) {
+  const target = id === 1 ? 'emoji1' : 'emoji3';
+  document.getElementById(target).textContent = getRandomEmoji();
+}
+
+function refreshTags() {
+  const shuffled = [...TAG_LIBRARY].sort(() => Math.random() - 0.5);
+  const selected = shuffled.slice(0, 10);
+  const box = document.getElementById('tagsBox');
+  box.innerHTML = selected.map(t => `<span class="tag">#${t}</span>`).join(' ');
+  box.dataset.tags = selected.map(t => `#${t}`).join(' ');
+}
+
+function getTagsText() {
+  const box = document.getElementById('tagsBox');
+  return box.dataset.tags || '';
+}
+
+// ===== 律师回答框（可动态增减）=====
+function getAllAnswers() {
+  const items = document.querySelectorAll('#answerBoxes .answer-item .answer-text');
+  return Array.from(items).map(t => t.value.trim()).filter(t => t.length > 0);
+}
+
+function renumberAnswerBoxes() {
+  const items = document.querySelectorAll('#answerBoxes .answer-item');
+  items.forEach((item, i) => {
+    const label = item.querySelector('.answer-label');
+    if (label) label.textContent = `回答 ${i + 1}`;
+    item.dataset.idx = i + 1;
+  });
+}
+
+function addAnswerBox() {
+  const container = document.getElementById('answerBoxes');
+  const idx = container.children.length + 1;
+  const div = document.createElement('div');
+  div.className = 'answer-item';
+  div.dataset.idx = idx;
+  div.innerHTML = `
+    <div class="answer-label">回答 ${idx}</div>
+    <textarea class="wx-textarea answer-text" placeholder="请输入或粘贴律师的回答..."></textarea>
+    <button class="remove-btn" onclick="removeAnswerBox(this)">✕ 删除</button>
+  `;
+  container.appendChild(div);
+  renumberAnswerBoxes();
+  div.querySelector('.answer-text').focus();
+}
+
+function removeAnswerBox(btn) {
+  const item = btn.closest('.answer-item');
+  if (!item) return;
+  // 至少保留1个回答框
+  const container = document.getElementById('answerBoxes');
+  if (container.children.length <= 1) {
+    showToast('至少需要保留1个回答框');
+    return;
+  }
+  item.remove();
+  renumberAnswerBoxes();
+}
+
+let userACurrentAvatarUrl = null;
+
+// 生成5-8位随机字符串作为头像生成器的seed
+function generateRandomAvatarSeed() {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  const len = Math.floor(Math.random() * 4) + 5; // 5-8位
+  let seed = '';
+  for (let i = 0; i < len; i++) {
+    seed += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return seed;
+}
+
+// DiceBear可爱风格列表
+const DICEBEAR_STYLES = [
+  'adventurer', 'big-smile', 'fun-emoji', 'micah', 'open-peeps',
+  'croodles', 'lorelei', 'avataaars', 'big-ears', 'notionists',
+  'personas', 'miniavs', 'toon-head', 'bottts', 'pixel-art'
+];
+
+async function refreshUserAAvatar() {
+  const seed = generateRandomAvatarSeed();
+  const style = DICEBEAR_STYLES[Math.floor(Math.random() * DICEBEAR_STYLES.length)];
+  userACurrentAvatarUrl = `https://api.dicebear.com/9.x/${style}/png?seed=${seed}&size=200`;
+
+  // 预览区域用<img>显示
+  const previewContainer = document.getElementById('userAAvatarPreviewContainer');
+  if (previewContainer) {
+    previewContainer.innerHTML = `<img src="${userACurrentAvatarUrl}" style="width:48px;height:48px;border-radius:50%;flex-shrink:0;" onerror="this.style.display='none'">`;
+  }
+}
+
+function createUserBAvatarCanvas() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 160;
+  canvas.height = 160;
+  const ctx = canvas.getContext('2d');
+
+  ctx.beginPath();
+  ctx.arc(80, 80, 76, 0, Math.PI * 2);
+  const gradient = ctx.createLinearGradient(0, 0, 160, 160);
+  gradient.addColorStop(0, '#1e3a5f');
+  gradient.addColorStop(1, '#0d2137');
+  ctx.fillStyle = gradient;
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(80, 80, 76, 0, Math.PI * 2);
+  ctx.strokeStyle = '#c9a96e';
+  ctx.lineWidth = 5;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(80, 80, 68, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(201, 169, 110, 0.5)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 64px Georgia, "Times New Roman", serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor = 'rgba(0,0,0,0.3)';
+  ctx.shadowBlur = 4;
+  ctx.shadowOffsetY = 2;
+  ctx.fillText('LB', 80, 84);
+  ctx.shadowColor = 'transparent';
+
+  return canvas;
+}
+
+function loadImage(src, withCrossOrigin = false) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    if (withCrossOrigin) img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+async function loadAvatarImages() {
+  if (!userACurrentAvatarUrl) {
+    await refreshUserAAvatar();
+  }
+  let aImg;
+  try {
+    aImg = await loadImage(userACurrentAvatarUrl, true);
+  } catch(e) {
+    // CORS加载失败时尝试不带crossOrigin（仅用于非CORS场景）
+    try {
+      aImg = await loadImage(userACurrentAvatarUrl);
+    } catch(e2) {
+      // 都失败时回退到Canvas生成
+      const bCanvas = createUserBAvatarCanvas();
+      aImg = await loadImage(bCanvas.toDataURL());
+    }
+  }
+
+  // 用户B头像使用本地上传的 avatar-Lawyer.png
+  let bImg;
+  try {
+    bImg = await loadImage('avatar-Lawyer.png');
+  } catch(e) {
+    const bCanvas = createUserBAvatarCanvas();
+    bImg = await loadImage(bCanvas.toDataURL());
+  }
+
+  return { aImg, bImg };
+}
+
+function wrapText(ctx, text, maxWidth) {
+  const lines = [];
+  let currentLine = '';
+  for (let char of text) {
+    const testLine = currentLine + char;
+    if (ctx.measureText(testLine).width > maxWidth && currentLine) {
+      lines.push(currentLine);
+      currentLine = char;
+    } else {
+      currentLine = testLine;
+    }
+  }
+  if (currentLine) lines.push(currentLine);
+  return lines;
+}
+
+function randomTimeBetween(minH, minM, maxH, maxM) {
+  const minMinutes = minH * 60 + minM;
+  const maxMinutes = maxH * 60 + maxM;
+  const randomMinutes = Math.floor(Math.random() * (maxMinutes - minMinutes + 1)) + minMinutes;
+  const h = Math.floor(randomMinutes / 60);
+  const m = randomMinutes % 60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+}
+
+async function generate() {
+  const emoji1 = document.getElementById('emoji1').textContent;
+  const text2 = document.getElementById('text2').value.trim();
+  const emoji3 = document.getElementById('emoji3').textContent;
+  const answers = getAllAnswers();
+  const tags5 = getTagsText();
+
+  if (!text2) { showToast('请填写对话框2的内容'); return; }
+  if (answers.length === 0) { showToast('请填写至少1个律师回答'); return; }
+
+  // 合并文本：仅第1个回答前加 emoji3+"答："，新增的回答不加
+  const answersMerged = answers.map((a, i) => i === 0 ? `${emoji3}答：${a}` : a).join('\n');
+  const merged = `${emoji1}问：${text2}\n${answersMerged}\n\n${tags5}`;
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(merged);
+      showToast('✅ 内容已复制到剪贴板');
+    } catch(e) {
+      fallbackCopy(merged);
+    }
+  } else {
+    fallbackCopy(merged);
+  }
+
+  await drawWeChatScreenshot(text2, answers);
+
+  // 将canvas转为img显示，方便右键保存
+  const canvas = document.getElementById('previewCanvas');
+  const img = document.getElementById('screenshotImg');
+  try {
+    img.src = canvas.toDataURL('image/png');
+  } catch(e) {
+    showToast('⚠️ 截图已生成，但图片预览受限，请使用下载按钮');
+  }
+}
+
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand('copy');
+    showToast('✅ 内容已复制到剪贴板');
+  } catch(e) {
+    showToast('❌ 复制失败，请手动复制');
+  }
+  document.body.removeChild(ta);
+}
+
+async function drawWeChatScreenshot(msgA, answerList) {
+  const W = 390;
+  const padding = 12;
+  const avatarSize = 44;
+  const bubbleMaxW = 256;
+  const msgGap = 30; // 消息之间的垂直间距
+
+  const tmpCanvas = document.createElement('canvas');
+  const tmpCtx = tmpCanvas.getContext('2d');
+  tmpCtx.font = '15px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+
+  // 用户A消息（问题）
+  const linesA = wrapText(tmpCtx, msgA, bubbleMaxW - 24);
+  const bubbleH_A = Math.max(44, linesA.length * 22 + 24);
+
+  // 每个律师回答 → 用户B消息
+  const bMessages = answerList.map(text => {
+    const lines = wrapText(tmpCtx, text, bubbleMaxW - 24);
+    const h = Math.max(44, lines.length * 22 + 24);
+    return { text, lines, h };
+  });
+
+  // 总高度 = 标题(44) + 时间条(50) + 顶部间距(20-15) + A气泡 + gap + 每条B气泡(+gap) + 底部留白(30)
+  let totalH = 44 + 50 + 20 - 15 + bubbleH_A + msgGap;
+  bMessages.forEach(m => { totalH += m.h + msgGap; });
+  totalH += 30;
+
+  const canvas = document.getElementById('previewCanvas');
+  const SCALE = 1000 / W; // 输出宽度1000px，高度按比例缩放
+  canvas.width = W * SCALE;
+  canvas.height = totalH * SCALE;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(SCALE, SCALE); // 所有绘制坐标仍使用390坐标系
+
+  // Background - WeChat chat bg
+  ctx.fillStyle = '#ededed';
+  ctx.fillRect(0, 0, W, totalH);
+
+  // Title bar (淡黄色背景, 暗黄色字体)
+  ctx.fillStyle = '#fff8e1';
+  ctx.fillRect(0, 0, W, 44);
+  // bottom border
+  ctx.fillStyle = '#e0d4a8';
+  ctx.fillRect(0, 43.5, W, 0.5);
+  // title text
+  ctx.fillStyle = '#b8860b';
+  ctx.font = 'bold 17px -apple-system, "PingFang SC", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('律师为您免费推介当地律师', W / 2 + 11, 22);
+
+  // 标题前加图标 up-handshake.png
+  try {
+    const titleIcon = await loadImage('up-handshake.png');
+    const iconSize = 22;
+    const titleText = '律师为您免费推介当地律师';
+    tmpCtx.font = 'bold 17px -apple-system, "PingFang SC", sans-serif';
+    const textW = tmpCtx.measureText(titleText).width;
+    const iconX = W / 2 + 11 - textW / 2 - iconSize - 4;
+    const iconY = 22 - iconSize / 2;
+    ctx.drawImage(titleIcon, iconX, iconY, iconSize, iconSize);
+  } catch(e) {
+    // 图片加载失败时忽略
+  }
+
+  // Date/time pill
+  const now = new Date();
+  const timeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${randomTimeBetween(9,0,17,30)}`;
+  tmpCtx.font = '12px -apple-system, sans-serif';
+  const pillW = tmpCtx.measureText(timeStr).width + 24;
+  const pillH = 20;
+  const pillY = 44 + 22;
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  roundRect(ctx, W/2 - pillW/2, pillY - pillH/2, pillW, pillH, 4, true, false);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '12px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(timeStr, W / 2, pillY);
+
+  // 预加载头像（一次性加载，多条B消息共用）
+  const { aImg, bImg } = await loadAvatarImages();
+
+  // Message A (user A - avatar on RIGHT, bubble on LEFT of avatar, green bg, tail RIGHT)
+  const msgATop = 44 + 50 + 20 - 15; // 所有组件向上移动15px
+  drawSelfMessage(ctx, W, padding, msgATop, avatarSize, bubbleMaxW, bubbleH_A, linesA);
+  // UserA avatar - RIGHT side
+  drawAvatarOnCanvas(ctx, W - padding - avatarSize, msgATop, avatarSize, aImg, 'A');
+
+  // 依次绘制每条律师回答 → 用户B消息（头像左侧，白色气泡，尖角指向左）
+  let curTop = msgATop + bubbleH_A + msgGap;
+  bMessages.forEach(m => {
+    drawOtherMessage(ctx, padding, curTop, avatarSize, bubbleMaxW, m.h, m.lines);
+    // UserB avatar - LEFT side（每条回答都画一个头像）
+    drawAvatarOnCanvas(ctx, padding, curTop, avatarSize, bImg, 'B');
+    curTop += m.h + msgGap;
+  });
+
+  document.getElementById('previewSection').classList.add('show');
+}
+
+function roundRect(ctx, x, y, w, h, r, fill, stroke) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+  if (fill) ctx.fill();
+  if (stroke) ctx.stroke();
+}
+
+function drawAvatarOnCanvas(ctx, x, y, size, img, fallbackText) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x + size/2, y + size/2, size/2, 0, Math.PI * 2);
+  ctx.closePath();
+  ctx.clip();
+  if (img) {
+    ctx.drawImage(img, x, y, size, size);
+  } else {
+    ctx.fillStyle = '#4a90d9';
+    ctx.fillRect(x, y, size, size);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 20px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(fallbackText, x + size/2, y + size/2);
+  }
+  ctx.restore();
+}
+
+// 自己的消息：头像在右，气泡绿色，尖角指向右（指向头像）
+function drawSelfMessage(ctx, W, rightPad, top, avatarSize, maxBubbleW, bubbleH, lines) {
+  const avatarX = W - rightPad - avatarSize;
+  const bubbleW = maxBubbleW;
+  const bubbleX = avatarX - 8 - bubbleW - 5; // 往左偏移5px(≈10rpx)
+  const bubbleY = top;
+  const bgColor = '#95ec69';
+
+  // Bubble tail (right-pointing, toward avatar)
+  ctx.beginPath();
+  ctx.moveTo(bubbleX + bubbleW, bubbleY + 14);
+  ctx.lineTo(bubbleX + bubbleW + 8, bubbleY + 18);
+  ctx.lineTo(bubbleX + bubbleW, bubbleY + 24);
+  ctx.closePath();
+  ctx.fillStyle = bgColor;
+  ctx.fill();
+
+  // Bubble body (rounded rect)
+  roundRect(ctx, bubbleX, bubbleY, bubbleW, bubbleH, 6, true, false);
+
+  // Text
+  ctx.fillStyle = '#000000';
+  ctx.font = '15px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  const textX = bubbleX + 12;
+  const textY = bubbleY + 11;
+  lines.forEach((line, i) => {
+    ctx.fillText(line, textX, textY + i * 22);
+  });
+}
+
+// 对方的消息：头像在左，气泡白色，尖角指向左（指向头像）
+function drawOtherMessage(ctx, leftPad, top, avatarSize, maxBubbleW, bubbleH, lines) {
+  const avatarX = leftPad;
+  const bubbleW = maxBubbleW;
+  const bubbleX = avatarX + avatarSize + 8 + 5; // 往右偏移5px(≈10rpx)
+  const bubbleY = top;
+  const bgColor = '#ffffff';
+
+  // Bubble tail (left-pointing, toward avatar)
+  ctx.beginPath();
+  ctx.moveTo(bubbleX, bubbleY + 14);
+  ctx.lineTo(bubbleX - 8, bubbleY + 18);
+  ctx.lineTo(bubbleX, bubbleY + 24);
+  ctx.closePath();
+  ctx.fillStyle = bgColor;
+  ctx.fill();
+
+  // Bubble body (rounded rect)
+  roundRect(ctx, bubbleX, bubbleY, bubbleW, bubbleH, 6, true, false);
+
+  // Text
+  ctx.fillStyle = '#000000';
+  ctx.font = '15px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  const textX = bubbleX + 12;
+  const textY = bubbleY + 11;
+  lines.forEach((line, i) => {
+    ctx.fillText(line, textX, textY + i * 22);
+  });
+}
+
+// 检测是否以 PWA 全屏模式（从主屏幕打开）运行
+function detectStandalone() {
+  const standalone = window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone === true;
+  if (standalone) {
+    // 全屏模式下系统状态栏会显示真实时间，隐藏模拟状态栏
+    const sb = document.querySelector('.wx-status-bar');
+    if (sb) sb.style.display = 'none';
+    document.documentElement.classList.add('pwa-standalone');
+  }
+  return standalone;
+}
+
+// 更新模拟状态栏时间
+function updateStatusBarTime() {
+  const el = document.getElementById('statusTime');
+  if (!el) return;
+  const now = new Date();
+  const h = now.getHours();
+  const m = String(now.getMinutes()).padStart(2, '0');
+  el.textContent = `${h}:${m}`;
+}
+
+// Init
+detectStandalone();
+updateStatusBarTime();
+setInterval(updateStatusBarTime, 30000); // 每30秒更新时间
+refreshEmoji(1);
+refreshEmoji(3);
+refreshTags();
+refreshUserAAvatar(); // async, fire-and-forget
+</script>
+
+</body>
+</html>
